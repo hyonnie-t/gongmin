@@ -213,11 +213,31 @@
   .field-error{color:var(--seal);font-size:.82rem;margin-top:4px;display:none;}
   .field-error.show{display:block;}
   .copy-status{font-size:.85rem;color:var(--ok);text-align:center;min-height:18px;margin-top:6px;}
+
+  /* ── 어려운 단어 — 점선 밑줄, 탭하면 하단 시트에 뜻이 뜬다 ── */
+  .term{text-decoration:underline dotted;text-decoration-color:var(--gold);text-underline-offset:3px;cursor:pointer;}
+  .term-tip{
+    position:fixed;left:0;right:0;bottom:-260px;max-height:45vh;overflow-y:auto;
+    background:var(--ink);color:var(--paper);border-top:2px solid var(--gold);
+    padding:16px 18px 22px;z-index:60;transition:bottom .25s ease;
+    box-shadow:0 -8px 24px rgba(0,0,0,.25);
+  }
+  .term-tip.open{bottom:0;}
+  .term-tip-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:1rem;margin-bottom:8px;}
+  .term-tip-head button{
+    background:none;border:1px solid var(--paper-dark);color:var(--paper);border-radius:14px;
+    padding:5px 13px;font-family:inherit;font-size:.82rem;cursor:pointer;
+  }
+  .term-tip-body{font-size:.92rem;line-height:1.7;}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <div class="toast" id="toast"></div>
+<div class="term-tip" id="termTip">
+  <div class="term-tip-head"><span id="termTipTitle"></span><button type="button" id="termTipClose">닫기</button></div>
+  <div class="term-tip-body" id="termTipBody"></div>
+</div>
 
 <script>
 (function(){
@@ -303,32 +323,58 @@
   ];
   function cardById(id){ return CARDS.filter(function(c){return c.id===id;})[0]; }
 
+  /* ══════════════════════════ 어려운 단어 사전 ══════════════════════════ */
+  // 본문(상황·힌트·실제 역사) 안의 단어를 탭하면 하단 시트로 뜻을 보여준다.
+  // his_judge_goryeo의 GLOSSARY/glossify_ 패턴을 그대로 재사용.
+  var GLOSSARY = {
+    "쌍성총관부": "원이 철령 이북 지역에 설치해 다스리던 통치 기구.",
+    "정동행성": "원이 고려에 설치해 내정을 간섭한 관청.",
+    "이문소": "정동행성 안에 있던 사법(재판) 담당 부서.",
+    "부마국": "원의 공주와 결혼한 국왕이 다스리는 나라 — 원에 종속된 지위를 뜻한다.",
+    "노국대장공주": "공민왕과 혼인한 원나라 공주.",
+    "몽골풍": "몽골(원)에서 들어온 풍습. 변발, 호복(몽골식 옷) 등이 있다.",
+    "연호": "왕이 즉위한 해를 기준으로 연도를 세는 방식.",
+    "공녀": "원이 고려에 요구해 데려간 여성들.",
+    "어사대": "관리의 잘못을 감찰하던 고려의 관청.",
+    "권문세족": "원 간섭기에 원에 기대어 성장한 새 지배 세력. 높은 관직을 독점하고 권력을 대물림했다.",
+    "전민변정도감": "권문세족이 불법으로 차지한 토지와 노비를 원래 주인에게 돌려주기 위해 만든 임시 기구.",
+    "신돈": "공민왕이 개혁을 맡기려고 등용한 승려.",
+    "성균관": "고려의 최고 교육 기관.",
+    "신진사대부": "성균관 등에서 유학을 공부하며 자라난 새로운 정치 세력. 훗날 고려 멸망과 조선 건국에 큰 역할을 한다."
+  };
+  function escapeReg_(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  var GLOSSARY_RE = new RegExp(Object.keys(GLOSSARY).sort(function(a,b){return b.length-a.length;}).map(escapeReg_).join("|"), "g");
+  function glossify_(str){
+    if (!str) return str;
+    return str.replace(GLOSSARY_RE, function(m){ return '<span class="term" data-term="'+m+'">'+m+'</span>'; });
+  }
+
   /* ══════════════════════════ 역할별 문구(왕 1인칭 / 조언자) ══════════════════════════ */
   var ROLE_INFO = {
     king: {
       label: "공민왕",
       emoji: "👑",
       pick: "공민왕이 되어본다",
-      pickDesc: "1인칭으로 직접 결정하고 명령을 내린다.",
-      solveProblem: "① 이 문제, 정확히 뭐가 골치인가?",
-      solveSolution: "② 나는 이 문제를 어떻게 풀 것인가?",
-      solveReason: "그렇게 결정한 근거는?",
-      solvePh: "예: 이문소부터 없애고, 정동행성 자체는 남겨둔다",
+      pickDesc: "내가 공민왕이 되어 직접 결정하고 명령을 내려보는 거야.",
+      solveProblem: "① 이 문제, 정확히 뭐가 문제일까?",
+      solveSolution: "② 나라면 이 문제를 어떻게 풀까?",
+      solveReason: "그렇게 결정한 이유는 뭐야?",
+      solvePh: "예: 이 문제는 이렇게 해결하겠다 — 구체적으로 적어보자",
       compareQ: "내가 정한 방법과 실제 역사, 같았을까?",
-      compareReasonQ: "어느 쪽이 더 나은 결정이라고 보는가? 근거는?",
-      unsolvedQ: "고려는, 아니 나는 왜 이 문제만 끝내 풀지 못했는가?"
+      compareReasonQ: "어느 쪽이 더 나은 결정이었다고 생각해? 이유는?",
+      unsolvedQ: "고려는, 아니 나는 왜 이 문제만 끝내 풀지 못했을까?"
     },
     advisor: {
       label: "공민왕의 책사",
       emoji: "📜",
       pick: "책사가 되어 조언한다",
-      pickDesc: "왕에게 해결책을 올리는 신하 입장에서 진언한다.",
-      solveProblem: "① 전하께서 겪고 계신 문제를 정리하면?",
-      solveSolution: "② 전하께 어떤 해결책을 올릴 것인가?",
-      solveReason: "그런 조언을 드리는 근거는?",
-      solvePh: "예: 전하, 이문소만 혁파하시고 정동행성은 그대로 두시옵소서",
+      pickDesc: "왕에게 해결책을 올리는 신하가 되어 조언해보는 거야.",
+      solveProblem: "① 전하가 겪고 있는 문제, 한 문장으로 정리하면?",
+      solveSolution: "② 전하께 어떤 해결책을 올려볼까?",
+      solveReason: "그렇게 조언하는 이유는 뭐야?",
+      solvePh: "예: 전하, 이렇게 해보시는 건 어떻겠습니까 — 구체적으로 적어보자",
       compareQ: "내가 올린 조언과 실제 역사, 같았을까?",
-      compareReasonQ: "어느 쪽 방법이 더 낫다고 보는가? 근거는?",
+      compareReasonQ: "어느 쪽 방법이 더 낫다고 생각해? 이유는?",
       unsolvedQ: "전하와 신하들은 왜 이 문제만 끝내 풀지 못했을까?"
     }
   };
@@ -437,12 +483,12 @@
       header() +
       '<div class="panel">' +
         '<h2>시작하기 전에</h2>' +
-        '<p class="lede">학번과 이름을 넣으면 시작한다.</p>' +
+        '<p class="lede">학번이랑 이름부터 적어볼까?</p>' +
         '<label class="field-label">학번(5자리)</label>' +
         '<input type="text" id="in-sid" inputmode="numeric" maxlength="5" placeholder="예: 30512" value="'+esc(state.sid)+'">' +
         '<label class="field-label">이름</label>' +
         '<input type="text" id="in-name" placeholder="이름" value="'+esc(state.name)+'">' +
-        '<div class="field-error" id="login-err">학번 5자리와 이름을 모두 넣어야 한다.</div>' +
+        '<div class="field-error" id="login-err">학번 5자리랑 이름, 둘 다 적어야 시작할 수 있어.</div>' +
         '<div class="btn-row"><button class="primary" id="btn-login">시작하기</button></div>' +
       '</div>'
     );
@@ -451,16 +497,17 @@
   function renderRole(){
     var priorBlock = "";
     if (state.priorCardId){
-      priorBlock = '<div class="prior-note">지난 시간, 원간섭기 문제 중 <b>' + esc(cardById(state.priorCardId).title) + '</b>를 가장 먼저 풀어야 한다고 골랐다. 오늘 ①단계 기본값으로 그 카드를 띄워둔다 — 그대로 이어가도 되고, 바꿔도 된다.</div>';
+      priorBlock = '<div class="prior-note">지난 시간에 <b>' + esc(cardById(state.priorCardId).title) + '</b> 문제를 가장 먼저 풀어야 한다고 골랐었지? 오늘은 그 카드부터 띄워놨어 — 그대로 이어가도 되고, 다른 카드로 바꿔도 괜찮아.</div>';
     } else if (state.priorFreeText){
-      priorBlock = '<div class="prior-note">지난 시간엔 "' + esc(state.priorFreeText) + '"를 직접 적어 골랐다. 이번엔 6개 카드 중에서 새로 하나를 고른다.</div>';
+      priorBlock = '<div class="prior-note">지난 시간엔 "' + esc(state.priorFreeText) + '"라고 직접 적어서 골랐었네. 이번엔 6개 카드 중에서 새로 하나를 골라보자.</div>';
     }
     return (
       header() +
       '<div class="panel">' +
-        '<h2>공민왕은 실제로 어떻게 풀었을까</h2>' +
-        '<p class="lede">지난 시간엔 원간섭기 문제 하나를 골라 해결 방법을 고민했고, 권문세족 재판까지 마쳤다. 이번엔 그 문제, 실제 공민왕이 어떻게 풀었는지를 확인할 차례다.<br><br>' +
-        '문제는 6개로 늘었다. 하나를 맡아 직접 풀어보고, 모둠원과 나눠 나머지를 채운 뒤, 내가 맡은 문제만 골라 실제 역사와 비교한다.</p>' +
+        '<h2>공민왕은 실제로 어떻게 풀었을까?</h2>' +
+        '<p class="lede">지난 시간엔 원간섭기 문제 하나를 골라서 어떻게 해결할지 고민해봤고, 권문세족 재판도 마쳤지?<br><br>' +
+        '이번엔 그 문제를 진짜 공민왕이 어떻게 풀었는지 확인해볼 차례야.<br><br>' +
+        '문제가 6개로 늘었어. 하나를 맡아서 직접 풀어보고, 모둠원이랑 나눠서 나머지도 채운 다음, 내가 맡은 문제만 골라 실제 역사랑 비교해볼 거야.</p>' +
         priorBlock +
         '<h3 style="margin-top:0">어떤 입장으로 풀어볼까?</h3>' +
         '<div class="role-grid">' +
@@ -495,16 +542,16 @@
       '<div class="panel" id="solve-panel">' +
         '<span class="stage-badge">'+stageLabel+'</span><span class="role-badge">'+ri.emoji+' '+esc(ri.label)+'</span>' +
         '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
-        '<p class="lede">'+esc(c.situation)+'</p>' +
+        '<p class="lede">'+glossify_(c.situation)+'</p>' +
         '<label class="field-label">'+esc(ri.solveProblem)+'</label>' +
-        '<textarea id="in-problem" placeholder="한 문장으로 정리한다">'+esc(d.problem)+'</textarea>' +
+        '<textarea id="in-problem" placeholder="한 문장으로 정리해보자">'+esc(d.problem)+'</textarea>' +
         '<label class="field-label">'+esc(ri.solveSolution)+'</label>' +
         '<textarea id="in-solution" placeholder="'+esc(ri.solvePh)+'">'+esc(d.solution)+'</textarea>' +
         '<label class="field-label">'+esc(ri.solveReason)+'</label>' +
-        '<textarea id="in-reason" placeholder="근거를 남긴다">'+esc(d.reason)+'</textarea>' +
-        '<button class="hint-toggle" id="btn-hint">💡 막막하면 힌트</button>' +
-        '<div class="hint-box" id="hint-box">'+esc(c.hint)+'</div>' +
-        '<div class="field-error" id="solve-err">세 칸을 다 채워야 다음으로 넘어간다.</div>' +
+        '<textarea id="in-reason" placeholder="이유를 적어보자">'+esc(d.reason)+'</textarea>' +
+        '<button class="hint-toggle" id="btn-hint">💡 막막할 땐 힌트 보기</button>' +
+        '<div class="hint-box" id="hint-box">'+glossify_(c.hint)+'</div>' +
+        '<div class="field-error" id="solve-err">세 칸을 다 채워야 다음으로 넘어갈 수 있어.</div>' +
         '<div class="btn-row">' +
           (mode === "first" ? '<button class="ghost" id="btn-change-card">다른 카드로 바꾸기</button>' : '') +
           '<button class="primary" id="btn-solve-next">다음</button>' +
@@ -514,7 +561,7 @@
   }
 
   function renderCardGrid(){
-    var html = '<div class="panel"><h3 style="margin-top:0">6개 카드 중 하나를 고른다</h3><div class="card-grid">';
+    var html = '<div class="panel"><h3 style="margin-top:0">6개 카드 중에서 하나를 골라보자</h3><div class="card-grid">';
     CARDS.forEach(function(c){
       var sel = state.ownCard === c.id ? " selected" : "";
       var flag = state.priorCardId === c.id ? '<span class="prior-flag">✓ 지난 시간 선택</span>' : '';
@@ -534,11 +581,11 @@
       header() +
       '<div class="panel">' +
         '<span class="stage-badge">② 모둠 배정</span>' +
-        '<h2>남은 카드, 모둠끼리 나눠 맡는다</h2>' +
-        '<p class="lede">모둠원 4명이 6장을 나눠야 하는데 기본은 1인 1장이라 2장이 남는다. 자원해서 2장을 맡으면 <b>탐구포인트를 더 받는다</b>(선생님이 확인 후 지급).</p>' +
+        '<h2>남은 카드는 모둠끼리 나눠서 맡아보자</h2>' +
+        '<p class="lede">모둠원 4명이 6장을 나눠야 하는데, 기본이 1인 1장이라 2장이 남아. 자원해서 2장을 맡으면 <b>탐구포인트를 더 받을 수 있어</b>(선생님이 확인하고 지급해줄 거야).</p>' +
         '<div class="btn-row">' +
-          '<button class="secondary" id="btn-vol-no">1장만 맡는다</button>' +
-          '<button class="primary" id="btn-vol-yes">2장 맡고 포인트 받는다</button>' +
+          '<button class="secondary" id="btn-vol-no">1장만 맡을래</button>' +
+          '<button class="primary" id="btn-vol-yes">2장 맡고 포인트 받을래</button>' +
         '</div>' +
       '</div>'
     );
@@ -548,7 +595,7 @@
     var remain = CARDS.filter(function(c){ return c.id !== state.ownCard; });
     var html = (
       header() +
-      '<div class="panel"><h3 style="margin-top:0">추가로 맡을 카드를 하나 더 고른다</h3><div class="card-grid">'
+      '<div class="panel"><h3 style="margin-top:0">추가로 맡을 카드를 하나 더 골라보자</h3><div class="card-grid">'
     );
     remain.forEach(function(c){
       var sel = state.secondCard === c.id ? " selected" : "";
@@ -580,15 +627,15 @@
         '<span class="stage-badge">② 모둠원에게 듣고 채우기 ('+(state.listenIdx+1)+'/'+remain.length+')</span>' +
         progressDots(state.listenIdx, remain.length) +
         '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
-        '<p class="lede">'+esc(c.situation)+'</p>' +
-        '<p class="note-small">이 카드는 발표를 듣고 채운다 — 직접 풀지 않았어도 된다.</p>' +
-        '<label class="field-label">① 그 친구는 문제를 어떻게 정리했나?</label>' +
-        '<textarea id="in-problem" placeholder="들은 내용을 요약한다">'+esc(d.problem)+'</textarea>' +
-        '<label class="field-label">② 그 친구가 제안한 방법은?</label>' +
-        '<textarea id="in-solution" placeholder="들은 해결방법을 남긴다">'+esc(d.solution)+'</textarea>' +
-        '<label class="field-label">근거는 뭐라고 설명했나?</label>' +
-        '<textarea id="in-reason" placeholder="들은 근거를 남긴다">'+esc(d.reason)+'</textarea>' +
-        '<div class="field-error" id="listen-err">세 칸을 다 채워야 다음으로 넘어간다.</div>' +
+        '<p class="lede">'+glossify_(c.situation)+'</p>' +
+        '<p class="note-small">이 카드는 발표를 듣고 채워보자 — 내가 직접 풀지 않았어도 괜찮아.</p>' +
+        '<label class="field-label">① 그 친구는 문제를 어떻게 정리했어?</label>' +
+        '<textarea id="in-problem" placeholder="들은 내용을 요약해서 적어보자">'+esc(d.problem)+'</textarea>' +
+        '<label class="field-label">② 그 친구는 어떤 방법을 제안했어?</label>' +
+        '<textarea id="in-solution" placeholder="들은 해결방법을 적어보자">'+esc(d.solution)+'</textarea>' +
+        '<label class="field-label">이유는 뭐라고 설명했어?</label>' +
+        '<textarea id="in-reason" placeholder="들은 이유를 적어보자">'+esc(d.reason)+'</textarea>' +
+        '<div class="field-error" id="listen-err">세 칸을 다 채워야 다음으로 넘어갈 수 있어.</div>' +
         '<div class="btn-row">' +
           (state.listenIdx>0 ? '<button class="ghost" id="btn-listen-prev">이전</button>' : '') +
           '<button class="primary" id="btn-listen-next">다음</button>' +
@@ -615,8 +662,8 @@
     var mineBlock = (
       '<div class="real-history" style="background:#fff;border-color:var(--line);">' +
         '<span class="tag" style="color:var(--ink-soft)">'+(state.role === "advisor" ? "내가 올린 조언" : "내가 정한 방법")+'</span>' +
-        esc(d.solution || "(작성 안 됨)") +
-        (d.reason ? '<div class="note-small">근거: '+esc(d.reason)+'</div>' : '') +
+        esc(d.solution || "(아직 안 썼어)") +
+        (d.reason ? '<div class="note-small">이유: '+esc(d.reason)+'</div>' : '') +
       '</div>'
     );
 
@@ -624,16 +671,16 @@
     if (isUnsolved){
       realBlock = (
         '<div class="real-history unsolved">' +
-          '<span class="tag">실제 역사 — 고려는 이 문제를 풀지 못했다</span>' +
-          esc(c.real) +
+          '<span class="tag">실제 역사 — 고려는 이 문제를 풀지 못했어</span>' +
+          glossify_(c.real) +
         '</div>'
       );
     } else {
       realBlock = (
         '<div class="real-history">' +
           '<span class="tag">실제 역사 속 공민왕의 대응</span>' +
-          esc(c.real) +
-          (c.extraNote ? '<div class="note-small">'+esc(c.extraNote)+'</div>' : '') +
+          glossify_(c.real) +
+          (c.extraNote ? '<div class="note-small">'+glossify_(c.extraNote)+'</div>' : '') +
         '</div>'
       );
     }
@@ -642,7 +689,7 @@
     if (isUnsolved){
       judgeBlock = (
         '<label class="field-label">'+esc(ri.unsolvedQ)+'</label>' +
-        '<textarea id="in-cmp-reason" placeholder="생각을 남긴다">'+esc(cd.reason)+'</textarea>'
+        '<textarea id="in-cmp-reason" placeholder="네 생각을 적어보자">'+esc(cd.reason)+'</textarea>'
       );
     } else {
       judgeBlock = (
@@ -654,7 +701,7 @@
           }).join('') +
         '</div>' +
         '<label class="field-label">'+esc(ri.compareReasonQ)+'</label>' +
-        '<textarea id="in-cmp-reason" placeholder="판단 근거를 남긴다">'+esc(cd.reason)+'</textarea>'
+        '<textarea id="in-cmp-reason" placeholder="판단한 이유를 적어보자">'+esc(cd.reason)+'</textarea>'
       );
     }
 
@@ -667,7 +714,7 @@
         mineBlock +
         realBlock +
         judgeBlock +
-        '<div class="field-error" id="compare-err">'+(isUnsolved ? '생각을 남겨야 다음으로 넘어간다.' : '판단과 근거를 다 채워야 다음으로 넘어간다.')+'</div>' +
+        '<div class="field-error" id="compare-err">'+(isUnsolved ? '생각을 적어야 다음으로 넘어갈 수 있어.' : '판단이랑 이유를 다 채워야 다음으로 넘어갈 수 있어.')+'</div>' +
         '<div class="btn-row">' +
           (state.compareIdx>0 ? '<button class="ghost" id="btn-cmp-prev">이전</button>' : '') +
           '<button class="primary" id="btn-cmp-next">'+(state.compareIdx===order.length-1 ? '마지막으로' : '다음')+'</button>' +
@@ -680,14 +727,14 @@
     return (
       header() +
       '<div class="end-banner">' +
-        '공민왕은 쌍성총관부를 되찾고, 이문소를 없애고, 전민변정도감으로 권문세족을 견제하며 개혁을 밀어붙였다.<br><br>' +
-        '하지만 개혁은 오래가지 못했다. <b>권문세족의 강한 반발</b> 속에 신돈이 제거됐고, 결국 <b>공민왕 자신도 시해</b>당하면서 개혁은 좌절됐다.<br><br>' +
-        '방향이 맞았던 개혁이 왜 실패로 끝났을까 — 다음 이야기(신진사대부의 성장, 위화도 회군)로 이어지는 질문이다.' +
+        glossify_('공민왕은 쌍성총관부를 되찾고, 이문소를 없애고, 전민변정도감으로 권문세족을 견제하며 개혁을 밀어붙였어.') + '<br><br>' +
+        '하지만 개혁은 오래가지 못했어. <b>권문세족의 강한 반발</b> 속에 ' + glossify_('신돈') + '이 제거됐고, 결국 <b>공민왕 자신도 시해</b>당하면서 개혁은 좌절됐어.<br><br>' +
+        '방향이 맞았던 개혁이 왜 실패로 끝났을까 — 다음 이야기(' + glossify_('신진사대부') + '의 성장, 위화도 회군)로 이어지는 질문이야.' +
       '</div>' +
       '<div class="panel">' +
         '<h2>확장 질문 <span class="note-small" style="font-weight:400;">(선택)</span></h2>' +
-        '<p class="lede">방향이 맞는 개혁도 왜 실패할 수 있었을까? 정답은 없다. 쓰고 싶으면 자유롭게 남긴다.</p>' +
-        '<textarea id="in-extension" style="min-height:110px" placeholder="생략해도 제출할 수 있다">'+esc(state.extension)+'</textarea>' +
+        '<p class="lede">방향이 맞는 개혁도 왜 실패할 수 있었을까? 정답은 없으니까 쓰고 싶은 대로 자유롭게 적어보자.</p>' +
+        '<textarea id="in-extension" style="min-height:110px" placeholder="안 써도 제출할 수 있어">'+esc(state.extension)+'</textarea>' +
         '<div class="btn-row">' +
           '<button class="primary" id="btn-submit">제출하기</button>' +
         '</div>' +
@@ -701,11 +748,11 @@
     return (
       header() +
       '<div class="panel">' +
-        '<p class="lede">수고했다. 오늘 정리한 카드는 다음 시간 신진사대부 이야기와 이어진다.</p>' +
+        '<p class="lede">수고했어! 오늘 정리한 카드는 다음 시간 신진사대부 이야기로 이어질 거야.</p>' +
       '</div>' +
       '<div class="panel">' +
         '<h2>📋 패들렛에 옮겨 쓰기</h2>' +
-        '<p class="lede">아래 글을 복사해서 패들렛에 붙여넣는다.</p>' +
+        '<p class="lede">아래 글을 복사해서 패들렛에 붙여넣어보자.</p>' +
         '<textarea id="padlet-text" readonly>'+esc(buildPadletText_())+'</textarea>' +
         '<div class="btn-row">' +
           '<button class="ghost" id="btn-copy-padlet">📋 복사하기</button>' +
@@ -762,7 +809,7 @@
       }
       state.sid = sid; state.name = name;
       var btn = this;
-      btn.disabled = true; btn.textContent = "지난 기록 확인 중…";
+      btn.disabled = true; btn.textContent = "지난 기록 확인하는 중…";
       loadPriorChoice_(sid, name).then(function(){
         goto("role");
       });
@@ -929,9 +976,9 @@
           document.execCommand("copy");
           box.setAttribute("readonly", "true");
         }
-        statusEl.textContent = "✅ 복사됐다 — 패들렛에 붙여넣으면 된다.";
+        statusEl.textContent = "✅ 복사 완료! 패들렛에 붙여넣기만 하면 돼.";
       }catch(err){
-        statusEl.textContent = "복사가 안 됐다 — 위 글을 길게 눌러 직접 선택해서 복사한다.";
+        statusEl.textContent = "복사가 잘 안 됐어 — 위 글을 길게 눌러서 직접 선택한 다음 복사해줘.";
         box.removeAttribute("readonly");
       }
     };
@@ -996,7 +1043,7 @@
     };
 
     if (PREVIEW){
-      toast("미리보기 모드 — 실제 저장은 되지 않았다");
+      toast("미리보기 모드라 실제로 저장되진 않았어");
       goto("done");
       return;
     }
@@ -1022,14 +1069,29 @@
       if (json && json.result === "success"){
         goto("done");
       } else {
-        toast((json && json.message) || "제출 중 문제가 생겼다 — 다시 시도한다.");
+        toast((json && json.message) || "제출하다가 문제가 생겼어 — 다시 시도해줘.");
       }
     })
     .catch(function(){
       state.submitting = false;
-      toast("네트워크 오류 — 다시 시도한다.");
+      toast("네트워크 오류야 — 다시 시도해줘.");
     });
   }
+
+  /* ══════════════════════════ 어려운 단어 탭 — 하단 시트 ══════════════════════════ */
+  document.addEventListener("click", function(e){
+    var t = e.target.closest(".term");
+    if (!t) return;
+    var term = t.dataset.term;
+    var def = GLOSSARY[term];
+    if (!def) return;
+    document.getElementById("termTipTitle").textContent = term;
+    document.getElementById("termTipBody").textContent = def;
+    document.getElementById("termTip").classList.add("open");
+  });
+  document.getElementById("termTipClose").addEventListener("click", function(){
+    document.getElementById("termTip").classList.remove("open");
+  });
 
   /* ══════════════════════════ 시작 ══════════════════════════ */
   function init(){
