@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>공민왕의 고민 리스트</title>
+<style>
+  :root{
+    --paper:#f3ead6;
+    --paper-dark:#e7d9b8;
+    --ink:#2c2417;
+    --ink-soft:#5a4d38;
+    --seal:#9c2e22;
+    --seal-dark:#7a2219;
+    --gold:#a9812f;
+    --line:#c9b98d;
+    --ok:#3f6b4a;
+    --unsolved:#5c4a1f;
+    --card-bg:#fbf6ea;
+    --shadow:0 3px 10px rgba(44,36,23,.12);
+    --tap-min:48px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 10%, rgba(169,129,47,.08), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(156,46,34,.06), transparent 45%),
+      var(--paper);
+    color:var(--ink);
+    font-family:"Noto Serif KR","Nanum Myeongjo",Georgia,"Batang",serif;
+    font-size:16px;
+    line-height:1.62;
+    min-height:100vh;
+  }
+  #app{max-width:720px;margin:0 auto;padding:18px 16px 60px;}
+
+  /* ── 상단 족자 헤더 ── */
+  .scroll-header{
+    text-align:center;
+    padding:22px 14px 18px;
+    margin-bottom:18px;
+    position:relative;
+  }
+  .scroll-header::before,.scroll-header::after{
+    content:"";
+    position:absolute;left:8%;right:8%;height:3px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  }
+  .scroll-header::before{top:6px;}
+  .scroll-header::after{bottom:2px;}
+  .scroll-header .seal{
+    display:inline-block;width:34px;height:34px;border-radius:6px;
+    background:var(--seal);color:#f3ead6;font-size:15px;font-weight:700;
+    line-height:34px;margin-bottom:8px;box-shadow:var(--shadow);
+    transform:rotate(-3deg);
+  }
+  .scroll-header h1{
+    margin:2px 0 4px;font-size:1.5rem;letter-spacing:.02em;font-weight:700;
+  }
+  .scroll-header p{margin:0;color:var(--ink-soft);font-size:.92rem;}
+
+  .stage-badge{
+    display:inline-block;background:var(--ink);color:var(--paper);
+    font-size:.78rem;padding:3px 12px;border-radius:999px;letter-spacing:.05em;
+    margin-bottom:10px;
+  }
+
+  .panel{
+    background:var(--card-bg);
+    border:1px solid var(--line);
+    border-radius:10px;
+    box-shadow:var(--shadow);
+    padding:18px 16px;
+    margin-bottom:16px;
+  }
+  .panel h2{font-size:1.15rem;margin:0 0 10px;}
+  .panel h3{font-size:1rem;margin:14px 0 6px;color:var(--ink-soft);}
+  .lede{color:var(--ink-soft);font-size:.95rem;margin:0 0 14px;}
+
+  /* ── 카드 그리드(6종 상황카드) ── */
+  .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:480px){.card-grid{grid-template-columns:1fr;}}
+  .situ-card{
+    text-align:left;
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:9px;
+    padding:12px 12px;
+    cursor:pointer;
+    min-height:var(--tap-min);
+    font-family:inherit;font-size:.94rem;color:var(--ink);
+    transition:border-color .15s, transform .1s;
+  }
+  .situ-card:active{transform:scale(.98);}
+  .situ-card .num{
+    display:inline-block;width:22px;height:22px;border-radius:50%;
+    background:var(--ink);color:var(--paper);font-size:.75rem;text-align:center;
+    line-height:22px;margin-right:6px;
+  }
+  .situ-card .t{font-weight:700;display:block;margin:6px 0 3px;}
+  .situ-card .s{color:var(--ink-soft);font-size:.86rem;}
+  .situ-card.disabled{opacity:.4;cursor:not-allowed;}
+  .situ-card.done{border-color:var(--ok);background:#f3f8f4;}
+  .situ-card.done .num{background:var(--ok);}
+  .situ-card.selected{border-color:var(--seal);border-width:2px;background:#fdf3f1;}
+
+  label.field-label{display:block;font-weight:700;font-size:.92rem;margin:14px 0 6px;}
+  textarea,input[type=text]{
+    width:100%;
+    font-family:inherit;font-size:1rem;
+    border:1.5px solid var(--line);border-radius:8px;
+    padding:10px 12px;background:#fff;color:var(--ink);
+    min-height:var(--tap-min);
+  }
+  textarea{resize:vertical;min-height:70px;}
+  textarea:focus,input:focus{outline:none;border-color:var(--gold);}
+
+  .hint-toggle{
+    background:none;border:1px dashed var(--gold);color:var(--gold);
+    border-radius:8px;padding:8px 12px;font-size:.86rem;cursor:pointer;
+    margin-top:8px;min-height:var(--tap-min);
+  }
+  .hint-box{
+    margin-top:8px;background:#fbf3e3;border-left:3px solid var(--gold);
+    padding:10px 12px;font-size:.88rem;color:var(--ink-soft);border-radius:0 6px 6px 0;
+    display:none;
+  }
+  .hint-box.show{display:block;}
+
+  .btn-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  button.primary,button.secondary,button.ghost{
+    font-family:inherit;font-size:1rem;font-weight:700;
+    border-radius:9px;padding:13px 18px;min-height:var(--tap-min);cursor:pointer;
+    border:none;flex:1;
+  }
+  button.primary{background:var(--seal);color:#fff;}
+  button.primary:active{background:var(--seal-dark);}
+  button.primary:disabled{background:#c9b39a;cursor:not-allowed;}
+  button.secondary{background:var(--ink);color:var(--paper);}
+  button.ghost{background:transparent;color:var(--ink-soft);border:1.5px solid var(--line);flex:0 0 auto;}
+
+  .choice-row{display:flex;gap:8px;margin:8px 0 4px;flex-wrap:wrap;}
+  .choice-pill{
+    border:1.5px solid var(--line);background:#fff;border-radius:999px;
+    padding:9px 16px;font-family:inherit;font-size:.9rem;cursor:pointer;
+    min-height:40px;
+  }
+  .choice-pill.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .real-history{
+    background:#f7f1e0;border:1px solid var(--gold);border-radius:8px;
+    padding:12px 13px;margin:10px 0 4px;font-size:.93rem;
+  }
+  .real-history.unsolved{background:#efe6d3;border-color:var(--unsolved);}
+  .real-history .tag{
+    font-size:.74rem;font-weight:700;letter-spacing:.04em;
+    color:var(--gold);display:block;margin-bottom:4px;
+  }
+  .real-history.unsolved .tag{color:var(--unsolved);}
+  .note-small{font-size:.82rem;color:var(--ink-soft);margin-top:6px;}
+
+  .progress-dots{display:flex;gap:6px;justify-content:center;margin:14px 0 2px;}
+  .progress-dots span{width:8px;height:8px;border-radius:50%;background:var(--line);}
+  .progress-dots span.active{background:var(--seal);}
+  .progress-dots span.past{background:var(--ok);}
+
+  .end-banner{
+    background:var(--ink);color:var(--paper);border-radius:10px;
+    padding:18px 16px;margin:6px 0 16px;line-height:1.7;
+  }
+  .end-banner b{color:#e8c77a;}
+
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:999px;
+    font-size:.88rem;box-shadow:var(--shadow);z-index:50;opacity:0;transition:opacity .2s;
+    pointer-events:none;max-width:88%;text-align:center;
+  }
+  .toast.show{opacity:1;}
+
+  .preview-flag{
+    position:fixed;top:0;left:0;right:0;background:var(--gold);color:#fff;
+    text-align:center;font-size:.8rem;padding:5px;z-index:40;
+  }
+  .field-error{color:var(--seal);font-size:.82rem;margin-top:4px;display:none;}
+  .field-error.show{display:block;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ══════════════════════════ CONFIG ══════════════════════════ */
+  var CONFIG = {
+    SHEET_WEBAPP_URL: "https://script.google.com/macros/s/AKfycbyXSjCfWY_HiZFqW_OBR-FQDoIfF1z_STqyKWUI31MacHeY3u7hbirFSFDvW-5yuUHaJQ/exec",
+    GAME_NAME: "4차시_공민왕개혁_고민리스트"
+  };
+
+  /* ══════════════════════════ 상황카드 6종 ══════════════════════════ */
+  var CARDS = [
+    {
+      id: 1,
+      title: "영토를 되찾아라",
+      situation: "원에게 빼앗겼던 땅을 원이 다스리고 있다(쌍성총관부). 공민왕이라면 이 문제를 어떻게 풀까?",
+      hint: "공민왕은 이 문제를 협상이 아니라 '군사 행동'으로 풀었어. 언제, 어느 지역을 공격했을지 생각해봐.",
+      real: "1356년, 공민왕은 쌍성총관부를 무력으로 공격해 철령 이북의 동북면 땅을 되찾았다. 원이 거의 100년 가까이 지배하던 지역을 고려가 다시 손에 넣은 것이다.",
+      tone: "normal"
+    },
+    {
+      id: 2,
+      title: "간섭에서 벗어나라",
+      situation: "원이 정동행성을 통해 고려의 정치에 계속 간섭하고 있다. 어떻게 막을까?",
+      hint: "'정동행성'이라는 기구 전체를 없앤 게 아니야. 그 안에 있던 한 부서만 잘라냈어.",
+      real: "공민왕은 정동행성 자체를 없애지는 못했다 — 정동행성은 이후에도 계속 존속했다. 대신 그 안에서 사법권을 휘두르며 내정간섭의 통로 노릇을 하던 '이문소'만 혁파했다. 기구 전체가 아니라, 문제의 핵심 부서 하나만 도려낸 것이다.",
+      tone: "normal",
+      extraNote: "※ 정동행성(큰 관청 전체) ≠ 이문소(그 안의 한 부서). 없앤 건 이문소뿐이다."
+    },
+    {
+      id: 3,
+      title: "낮아진 격을 되찾아라",
+      situation: "원의 부마국이 되면서 고려 왕실의 호칭과 격이 낮아졌다. 어떻게 되찾을까?",
+      hint: "복장과 머리 모양, 관청 이름, 연호(연도를 세는 방식)까지 — '원의 흔적'을 하나씩 지워나갔어.",
+      real: "공민왕은 몽골식 풍습(변발 등)을 금지하고, 원의 연호 사용을 중단했으며, 원의 간섭으로 격하됐던 관제와 왕실 호칭을 원래대로 복구했다. 그런데 흥미로운 사실이 있다 — 공민왕 자신도 원의 노국대장공주와 혼인한 '부마'였다. 원의 사위였던 왕이 오히려 반원정책을 이끈 것이다.",
+      tone: "normal"
+    },
+    {
+      id: 4,
+      title: "끝없는 수탈을 멈춰라",
+      situation: "원이 공물과 특산물, 공녀(여성 인력)까지 계속 요구하고 있다. 어떻게 멈출까?",
+      hint: "이 카드는 다른 카드들과 조금 달라. 실제로 고려가 이 문제를 스스로 풀어냈을지, 확신을 갖지 말고 접근해봐.",
+      real: "고려의 학자 이곡은 원의 어사대에 공녀 제도를 폐지해달라는 상소를 올렸다. 하지만 받아들여지지 않았다 — 이 문제는 고려의 힘으로 해결되지 못했다. 결국 1368년 원나라가 멸망하면서 공녀 요구도 함께 사라졌다. 고려는 이 문제 앞에서 끝내 이기지 못했다.",
+      tone: "unsolved"
+    },
+    {
+      id: 5,
+      title: "권문세족의 횡포를 막아라",
+      situation: "권문세족이 백성의 토지와 노비를 불법으로 빼앗고 있다. 어떻게 막을까?",
+      hint: "불법으로 빼앗은 것을 원래 주인에게 돌려주는 일을 전담하는 새 기구를 만들었어.",
+      real: "공민왕은 1366년 전민변정도감을 설치하고 승려 신돈을 등용해, 권문세족이 불법으로 차지한 토지와 노비를 원래 주인에게 돌려주게 했다.",
+      tone: "normal"
+    },
+    {
+      id: 6,
+      title: "개혁을 도울 인재가 없다",
+      situation: "기존 관료 대부분이 권문세족과 얽혀 있어 개혁을 함께할 사람이 마땅치 않다. 어떻게 할까?",
+      hint: "당장 쓸 사람이 없으면 새로 키우는 방법도 있어. 옛 교육기관 하나를 정비했어.",
+      real: "공민왕은 신돈을 등용해 개혁을 맡기는 한편, 성균관을 정비하고 유학 교육을 강화했다. 이는 훗날 신진사대부가 성장하는 발판이 됐다.",
+      tone: "normal"
+    }
+  ];
+  function cardById(id){ return CARDS.filter(function(c){return c.id===id;})[0]; }
+
+  /* ══════════════════════════ 상태 ══════════════════════════ */
+  var qs = new URLSearchParams(location.search);
+  var PREVIEW = qs.get("preview") === "1";
+
+  var state = {
+    step: "login",          // login | intro | solve1 | volunteer | solve2 | listen | compare | ending | done
+    sid: qs.get("sid") || "",
+    name: qs.get("name") || "",
+    ownCard: null,          // 1단계에서 고른 카드 id
+    volunteer: false,
+    secondCard: null,       // 자원 시 추가로 고른 카드 id
+    listenIdx: 0,           // 모둠원에게 듣고 채우는 중 몇 번째 카드인지(남은 카드 배열 인덱스)
+    compareIdx: 0,
+    data: {},               // { [cardId]: {problem, solution, reason, source:'self'|'heard'} }
+    compareData: {},        // { [cardId]: {verdict, reason} }
+    extension: "",
+    submitting: false
+  };
+
+  function myCardIds(){
+    var ids = [state.ownCard];
+    if (state.volunteer && state.secondCard) ids.push(state.secondCard);
+    return ids;
+  }
+  function remainingCardIds(){
+    var mine = myCardIds();
+    return CARDS.map(function(c){return c.id;}).filter(function(id){ return mine.indexOf(id) === -1; });
+  }
+  function allSixOrdered(){
+    return CARDS.map(function(c){return c.id;});
+  }
+
+  /* ══════════════════════════ 유틸 ══════════════════════════ */
+  function toast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  }
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function progressDots(activeIdx, total){
+    var html = '<div class="progress-dots">';
+    for (var i=0;i<total;i++){
+      var cls = i<activeIdx ? "past" : (i===activeIdx ? "active" : "");
+      html += '<span class="'+cls+'"></span>';
+    }
+    return html + '</div>';
+  }
+
+  /* ══════════════════════════ 화면 렌더 함수들 ══════════════════════════ */
+  function renderLogin(){
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+        '<p>3차시 · 역사법정 다음 이야기</p>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<h2>들어가기 전에</h2>' +
+        '<p class="lede">학번과 이름을 입력하고 시작하자.</p>' +
+        '<label class="field-label">학번(5자리)</label>' +
+        '<input type="text" id="in-sid" inputmode="numeric" maxlength="5" placeholder="예: 30512" value="'+esc(state.sid)+'">' +
+        '<label class="field-label">이름</label>' +
+        '<input type="text" id="in-name" placeholder="이름" value="'+esc(state.name)+'">' +
+        '<div class="field-error" id="login-err">학번 5자리와 이름을 모두 입력해줘.</div>' +
+        '<div class="btn-row"><button class="primary" id="btn-login">시작하기</button></div>' +
+      '</div>'
+    );
+  }
+
+  function renderIntro(){
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<span class="stage-badge">도입</span>' +
+        '<h2>지난 시간, 너는 어떤 고민을 골랐지?</h2>' +
+        '<p class="lede">지난 시간엔 원간섭기의 문제 상황 카드 중 하나를 골라 해결 방법을 고민했다. 그리고 권문세족 재판까지 마쳤다.<br><br>' +
+        '이번 시간엔 관점을 바꿔본다. <b>네가 가장 먼저 풀어야 한다고 골랐던 문제, 실제로 공민왕은 어떻게 풀었을까?</b><br><br>' +
+        '이번엔 문제가 6개로 늘었다. 그중 하나를 골라 너라면 어떻게 풀지 먼저 정리하고, 모둠원과 나눠 나머지 5개도 채운 뒤, 마지막에 실제 역사와 비교해본다.</p>' +
+        '<div class="btn-row"><button class="primary" id="btn-to-solve1">문제 카드 보러가기</button></div>' +
+      '</div>'
+    );
+  }
+
+  function renderSolve(cardId, mode){
+    // mode: 'first' | 'second'
+    var c = cardById(cardId);
+    if (!c){
+      // 아직 카드를 고르지 않은 상태(1단계 진입 직후) — 선택 그리드만 보여준다
+      return (
+        '<div class="scroll-header">' +
+          '<span class="seal">敎</span>' +
+          '<h1>공민왕의 고민 리스트</h1>' +
+        '</div>' +
+        renderCardGrid()
+      );
+    }
+    var d = state.data[cardId] || {problem:"",solution:"",reason:""};
+    var stageLabel = mode === "first" ? "① 개인 판단" : "② 자원 카드";
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+      '</div>' +
+      (mode === "first" ? renderCardGrid() : '') +
+      '<div class="panel" id="solve-panel">' +
+        '<span class="stage-badge">'+stageLabel+'</span>' +
+        '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
+        '<p class="lede">'+esc(c.situation)+'</p>' +
+        '<label class="field-label">① 이 문제 상황을 한 문장으로 정리하면?</label>' +
+        '<textarea id="in-problem" placeholder="예: 원이 이문소를 통해 고려의 재판에까지 간섭하고 있다.">'+esc(d.problem)+'</textarea>' +
+        '<label class="field-label">② 공민왕이라면 어떻게 해결해야 할까?</label>' +
+        '<textarea id="in-solution" placeholder="너라면 이 문제를 어떻게 풀지 적어보자">'+esc(d.solution)+'</textarea>' +
+        '<label class="field-label">그렇게 생각한 이유는?</label>' +
+        '<textarea id="in-reason" placeholder="이유를 적어보자">'+esc(d.reason)+'</textarea>' +
+        '<button class="hint-toggle" id="btn-hint">💡 막막하면 힌트 보기</button>' +
+        '<div class="hint-box" id="hint-box">'+esc(c.hint)+'</div>' +
+        '<div class="field-error" id="solve-err">세 칸을 모두 채워야 다음으로 넘어갈 수 있어.</div>' +
+        '<div class="btn-row">' +
+          (mode === "first" ? '<button class="ghost" id="btn-change-card">다른 카드 고르기</button>' : '') +
+          '<button class="primary" id="btn-solve-next">다음</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderCardGrid(){
+    var html = '<div class="panel"><h3 style="margin-top:0">6개 카드 중 하나를 골라줘</h3><div class="card-grid">';
+    CARDS.forEach(function(c){
+      var sel = state.ownCard === c.id ? " selected" : "";
+      html += '<button class="situ-card'+sel+'" data-card="'+c.id+'">' +
+        '<span class="num">'+c.id+'</span>' +
+        '<span class="t">'+esc(c.title)+'</span>' +
+        '<span class="s">'+esc(c.situation)+'</span>' +
+      '</button>';
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderVolunteer(){
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<span class="stage-badge">② 모둠 배정</span>' +
+        '<h2>남은 카드는 모둠원과 나눠 맡는다</h2>' +
+        '<p class="lede">모둠원 4명이 6장을 나눠 맡아야 하는데, 기본은 1인 1장이라 2장이 남는다. 자원해서 2장을 맡으면 <b>탐구포인트를 추가로 받을 수 있다</b>(선생님이 직접 확인 후 지급).</p>' +
+        '<div class="btn-row">' +
+          '<button class="secondary" id="btn-vol-no">1장만 맡을게요</button>' +
+          '<button class="primary" id="btn-vol-yes">2장 맡고 포인트 받을게요</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderPickSecond(){
+    var remain = CARDS.filter(function(c){ return c.id !== state.ownCard; });
+    var html = (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+      '</div>' +
+      '<div class="panel"><h3 style="margin-top:0">추가로 맡을 카드 하나를 더 골라줘</h3><div class="card-grid">'
+    );
+    remain.forEach(function(c){
+      var sel = state.secondCard === c.id ? " selected" : "";
+      html += '<button class="situ-card'+sel+'" data-card2="'+c.id+'">' +
+        '<span class="num">'+c.id+'</span>' +
+        '<span class="t">'+esc(c.title)+'</span>' +
+        '<span class="s">'+esc(c.situation)+'</span>' +
+      '</button>';
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderListen(){
+    var remain = remainingCardIds();
+    if (state.listenIdx >= remain.length){
+      // 방어적 처리 — 정상 흐름에서는 btn-listen-next 핸들러가 이 지점에 닿기 전에
+      // "compare"로 이미 전환한다(렌더 도중 상태를 바꾸면 방금 그린 화면이 덮어써짐).
+      state.step = "compare";
+      state.compareIdx = 0;
+      return renderCompare();
+    }
+    var cid = remain[state.listenIdx];
+    var c = cardById(cid);
+    var d = state.data[cid] || {problem:"",solution:"",reason:""};
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<span class="stage-badge">② 모둠원에게 듣고 채우기 ('+(state.listenIdx+1)+'/'+remain.length+')</span>' +
+        progressDots(state.listenIdx, remain.length) +
+        '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
+        '<p class="lede">'+esc(c.situation)+'</p>' +
+        '<p class="note-small">이 카드는 모둠원이 발표한 내용을 듣고 채워보자.</p>' +
+        '<label class="field-label">① 그 친구는 문제 상황을 어떻게 정리했지?</label>' +
+        '<textarea id="in-problem" placeholder="들은 내용을 요약해서 적어보자">'+esc(d.problem)+'</textarea>' +
+        '<label class="field-label">② 그 친구가 제안한 해결방법은?</label>' +
+        '<textarea id="in-solution" placeholder="들은 해결방법을 적어보자">'+esc(d.solution)+'</textarea>' +
+        '<label class="field-label">그 이유는 뭐라고 했지?</label>' +
+        '<textarea id="in-reason" placeholder="들은 이유를 적어보자">'+esc(d.reason)+'</textarea>' +
+        '<div class="field-error" id="listen-err">세 칸을 모두 채워야 다음으로 넘어갈 수 있어.</div>' +
+        '<div class="btn-row">' +
+          (state.listenIdx>0 ? '<button class="ghost" id="btn-listen-prev">이전</button>' : '') +
+          '<button class="primary" id="btn-listen-next">다음</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderCompare(){
+    var order = allSixOrdered();
+    if (state.compareIdx >= order.length){
+      // 방어적 처리 — 정상 흐름에서는 btn-cmp-next 핸들러가 이 지점에 닿기 전에
+      // "ending"으로 이미 전환한다(렌더 도중 상태를 바꾸면 방금 그린 화면이 덮어써짐).
+      state.step = "ending";
+      return renderEnding();
+    }
+    var cid = order[state.compareIdx];
+    var c = cardById(cid);
+    var d = state.data[cid] || {problem:"",solution:"",reason:""};
+    var cd = state.compareData[cid] || {verdict:"", reason:""};
+    var isUnsolved = c.tone === "unsolved";
+
+    var mineBlock = (
+      '<div class="real-history" style="background:#fff;border-color:var(--line);">' +
+        '<span class="tag" style="color:var(--ink-soft)">내가 정리한 해결방법</span>' +
+        esc(d.solution || "(작성 안 됨)") +
+        (d.reason ? '<div class="note-small">이유: '+esc(d.reason)+'</div>' : '') +
+      '</div>'
+    );
+
+    var realBlock;
+    if (isUnsolved){
+      realBlock = (
+        '<div class="real-history unsolved">' +
+          '<span class="tag">실제 역사 — 고려는 이 문제를 풀지 못했다</span>' +
+          esc(c.real) +
+        '</div>'
+      );
+    } else {
+      realBlock = (
+        '<div class="real-history">' +
+          '<span class="tag">실제 역사 속 공민왕의 대응</span>' +
+          esc(c.real) +
+          (c.extraNote ? '<div class="note-small">'+esc(c.extraNote)+'</div>' : '') +
+        '</div>'
+      );
+    }
+
+    var judgeBlock;
+    if (isUnsolved){
+      judgeBlock = (
+        '<label class="field-label">고려는 왜 유독 이 문제만 스스로 풀지 못했을까?</label>' +
+        '<textarea id="in-cmp-reason" placeholder="네 생각을 적어보자">'+esc(cd.reason)+'</textarea>'
+      );
+    } else {
+      judgeBlock = (
+        '<label class="field-label">내 해결방법과 실제 역사, 같았을까 달랐을까?</label>' +
+        '<div class="choice-row">' +
+          ['같았다','비슷했다','달랐다'].map(function(opt){
+            var active = cd.verdict === opt ? " active" : "";
+            return '<button class="choice-pill'+active+'" data-verdict="'+opt+'">'+opt+'</button>';
+          }).join('') +
+        '</div>' +
+        '<label class="field-label">어느 쪽이 더 낫다고 생각해? 이유는?</label>' +
+        '<textarea id="in-cmp-reason" placeholder="네 판단과 근거를 적어보자">'+esc(cd.reason)+'</textarea>'
+      );
+    }
+
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<span class="stage-badge">③ 실제 역사와 비교 ('+(state.compareIdx+1)+'/6)</span>' +
+        progressDots(state.compareIdx, 6) +
+        '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
+        mineBlock +
+        realBlock +
+        judgeBlock +
+        '<div class="field-error" id="compare-err">'+(isUnsolved ? '생각을 적어야 다음으로 넘어갈 수 있어.' : '판단과 이유를 모두 채워야 다음으로 넘어갈 수 있어.')+'</div>' +
+        '<div class="btn-row">' +
+          (state.compareIdx>0 ? '<button class="ghost" id="btn-cmp-prev">이전</button>' : '') +
+          '<button class="primary" id="btn-cmp-next">'+(state.compareIdx===5 ? '마지막으로' : '다음')+'</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderEnding(){
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">敎</span>' +
+        '<h1>공민왕의 고민 리스트</h1>' +
+      '</div>' +
+      '<div class="end-banner">' +
+        '공민왕은 쌍성총관부를 되찾고, 이문소를 없애고, 전민변정도감으로 권문세족을 견제하며 개혁을 밀어붙였다.<br><br>' +
+        '하지만 개혁은 오래가지 못했다. <b>권문세족의 강한 반발</b> 속에 신돈이 제거됐고, 결국 <b>공민왕 자신도 시해</b>당하면서 개혁은 좌절됐다.<br><br>' +
+        '방향이 맞았던 개혁이 왜 실패로 끝났을까 — 이 질문은 다음 이야기(신진사대부의 성장, 위화도 회군)로 이어진다.' +
+      '</div>' +
+      '<div class="panel">' +
+        '<h2>확장 질문</h2>' +
+        '<p class="lede">방향이 맞는 개혁도 왜 실패할 수 있었을까? 정답은 없다. 네 생각을 자유롭게 적어보자.</p>' +
+        '<textarea id="in-extension" style="min-height:110px">'+esc(state.extension)+'</textarea>' +
+        '<div class="field-error" id="ext-err">한 문장이라도 적어야 제출할 수 있어.</div>' +
+        '<div class="btn-row">' +
+          '<button class="primary" id="btn-submit">제출하기</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderDone(){
+    return (
+      '<div class="scroll-header">' +
+        '<span class="seal">畢</span>' +
+        '<h1>제출 완료</h1>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<p class="lede">수고했어. 오늘 정리한 6개 카드는 다음 시간 신진사대부 이야기와 연결된다.</p>' +
+      '</div>'
+    );
+  }
+
+  /* ══════════════════════════ 메인 렌더 ══════════════════════════ */
+  function render(){
+    var app = document.getElementById("app");
+    var html = "";
+    if (PREVIEW) html += '<div class="preview-flag">미리보기 모드 — 서버에 저장되지 않습니다</div>';
+    switch(state.step){
+      case "login": html += renderLogin(); break;
+      case "intro": html += renderIntro(); break;
+      case "solve1": html += renderSolve(state.ownCard, "first"); break;
+      case "volunteer": html += renderVolunteer(); break;
+      case "solve2": html += renderSolve(state.secondCard, "second"); break;
+      case "listen": html += renderListen(); break;
+      case "compare": html += renderCompare(); break;
+      case "ending": html += renderEnding(); break;
+      case "done": html += renderDone(); break;
+    }
+    app.innerHTML = html;
+    bindEvents();
+  }
+  function goto(step){ state.step = step; render(); window.scrollTo(0,0); }
+
+  /* ══════════════════════════ 이벤트 바인딩 ══════════════════════════ */
+  function bindEvents(){
+    switch(state.step){
+      case "login": bindLogin(); break;
+      case "intro": bindIntro(); break;
+      case "solve1": bindSolve("first"); break;
+      case "volunteer": bindVolunteer(); break;
+      case "solve2": bindSolve("second"); break;
+      case "listen": bindListen(); break;
+      case "compare": bindCompare(); break;
+      case "ending": bindEnding(); break;
+    }
+  }
+
+  function bindLogin(){
+    document.getElementById("btn-login").onclick = function(){
+      var sid = document.getElementById("in-sid").value.trim();
+      var name = document.getElementById("in-name").value.trim();
+      if (!/^\d{5}$/.test(sid) || !name){
+        document.getElementById("login-err").classList.add("show");
+        return;
+      }
+      state.sid = sid; state.name = name;
+      goto("intro");
+    };
+  }
+
+  function bindIntro(){
+    document.getElementById("btn-to-solve1").onclick = function(){ goto("solve1"); };
+  }
+
+  function bindSolve(mode){
+    // 카드 선택(1단계만)
+    if (mode === "first"){
+      Array.prototype.forEach.call(document.querySelectorAll(".situ-card[data-card]"), function(btn){
+        btn.onclick = function(){
+          state.ownCard = Number(btn.getAttribute("data-card"));
+          if (!state.data[state.ownCard]) state.data[state.ownCard] = {problem:"",solution:"",reason:""};
+          render();
+        };
+      });
+      var chBtn = document.getElementById("btn-change-card");
+      if (chBtn) chBtn.onclick = function(){ state.ownCard = null; render(); };
+    }
+    var hintBtn = document.getElementById("btn-hint");
+    if (hintBtn){
+      hintBtn.onclick = function(){
+        document.getElementById("hint-box").classList.toggle("show");
+      };
+    }
+    var nextBtn = document.getElementById("btn-solve-next");
+    if (nextBtn){
+      nextBtn.onclick = function(){
+        if (!state.ownCard && mode==="first"){ return; }
+        var cid = mode === "first" ? state.ownCard : state.secondCard;
+        var p = document.getElementById("in-problem").value.trim();
+        var s = document.getElementById("in-solution").value.trim();
+        var r = document.getElementById("in-reason").value.trim();
+        if (!p || !s || !r){
+          document.getElementById("solve-err").classList.add("show");
+          return;
+        }
+        state.data[cid] = {problem:p, solution:s, reason:r, source:"self"};
+        if (mode === "first"){
+          goto("volunteer");
+        } else {
+          state.listenIdx = 0;
+          goto("listen");
+        }
+      };
+    }
+  }
+
+  function bindVolunteer(){
+    document.getElementById("btn-vol-no").onclick = function(){
+      state.volunteer = false; state.secondCard = null;
+      state.listenIdx = 0;
+      goto("listen");
+    };
+    document.getElementById("btn-vol-yes").onclick = function(){
+      state.volunteer = true;
+      state.step = "pickSecond";
+      renderPickSecondStep();
+    };
+  }
+
+  // pickSecond는 volunteer 흐름 중간 화면이라 별도 렌더 경로로 처리
+  function renderPickSecondStep(){
+    var app = document.getElementById("app");
+    var html = "";
+    if (PREVIEW) html += '<div class="preview-flag">미리보기 모드 — 서버에 저장되지 않습니다</div>';
+    html += renderPickSecond();
+    app.innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll(".situ-card[data-card2]"), function(btn){
+      btn.onclick = function(){
+        state.secondCard = Number(btn.getAttribute("data-card2"));
+        if (!state.data[state.secondCard]) state.data[state.secondCard] = {problem:"",solution:"",reason:""};
+        state.step = "solve2";
+        render();
+      };
+    });
+  }
+
+  function bindListen(){
+    var remain = remainingCardIds();
+    var cid = remain[state.listenIdx];
+    var prevBtn = document.getElementById("btn-listen-prev");
+    if (prevBtn) prevBtn.onclick = function(){ state.listenIdx--; render(); };
+    document.getElementById("btn-listen-next").onclick = function(){
+      var p = document.getElementById("in-problem").value.trim();
+      var s = document.getElementById("in-solution").value.trim();
+      var r = document.getElementById("in-reason").value.trim();
+      if (!p || !s || !r){
+        document.getElementById("listen-err").classList.add("show");
+        return;
+      }
+      state.data[cid] = {problem:p, solution:s, reason:r, source:"heard"};
+      state.listenIdx++;
+      goto("listen");
+    };
+  }
+
+  function bindCompare(){
+    var order = allSixOrdered();
+    var cid = order[state.compareIdx];
+    var c = cardById(cid);
+    if (c.tone !== "unsolved"){
+      Array.prototype.forEach.call(document.querySelectorAll(".choice-pill[data-verdict]"), function(btn){
+        btn.onclick = function(){
+          if (!state.compareData[cid]) state.compareData[cid] = {verdict:"",reason:""};
+          state.compareData[cid].verdict = btn.getAttribute("data-verdict");
+          render();
+        };
+      });
+    }
+    var prevBtn = document.getElementById("btn-cmp-prev");
+    if (prevBtn) prevBtn.onclick = function(){ state.compareIdx--; render(); };
+    document.getElementById("btn-cmp-next").onclick = function(){
+      var reason = document.getElementById("in-cmp-reason").value.trim();
+      var verdict = (state.compareData[cid] && state.compareData[cid].verdict) || "";
+      if (!reason || (c.tone !== "unsolved" && !verdict)){
+        document.getElementById("compare-err").classList.add("show");
+        return;
+      }
+      state.compareData[cid] = {verdict: verdict, reason: reason};
+      state.compareIdx++;
+      goto("compare");
+    };
+  }
+
+  function bindEnding(){
+    document.getElementById("btn-submit").onclick = function(){
+      var ext = document.getElementById("in-extension").value.trim();
+      if (!ext){
+        document.getElementById("ext-err").classList.add("show");
+        return;
+      }
+      state.extension = ext;
+      submit();
+    };
+  }
+
+  /* ══════════════════════════ 제출 ══════════════════════════ */
+  function buildChoiceSummary(){
+    var mine = myCardIds();
+    var titles = mine.map(function(id){ return "카드"+id+"("+cardById(id).title+")"; });
+    return "담당: " + titles.join(", ") + (state.volunteer ? " [자원 2장]" : "");
+  }
+  function buildDiffSummary(){
+    var order = allSixOrdered();
+    var same=0, similar=0, diff=0;
+    order.forEach(function(id){
+      var v = state.compareData[id] && state.compareData[id].verdict;
+      if (v === "같았다") same++;
+      else if (v === "비슷했다") similar++;
+      else if (v === "달랐다") diff++;
+    });
+    return "같음 "+same+" · 비슷 "+similar+" · 다름 "+diff+" · 카드4(미해결) 별도 서술 포함";
+  }
+
+  function submit(){
+    if (state.submitting) return;
+    state.submitting = true;
+
+    var choicesJson = {
+      ownCard: state.ownCard,
+      volunteer: state.volunteer,
+      secondCard: state.secondCard || null,
+      cards: state.data,
+      compare: state.compareData,
+      extension: state.extension
+    };
+
+    if (PREVIEW){
+      toast("미리보기 모드 — 실제 저장은 되지 않았어");
+      goto("done");
+      return;
+    }
+
+    var payload = {
+      studentId: state.sid,
+      studentName: state.name,
+      gameName: CONFIG.GAME_NAME,
+      choiceSummary: buildChoiceSummary(),
+      diffSummary: buildDiffSummary(),
+      reflection: state.extension,
+      choicesJson: JSON.stringify(choicesJson)
+    };
+
+    fetch(CONFIG.SHEET_WEBAPP_URL, {
+      method: "POST",
+      headers: {"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify(payload)
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      state.submitting = false;
+      if (json && json.result === "success"){
+        goto("done");
+      } else {
+        toast((json && json.message) || "제출 중 문제가 생겼어. 다시 시도해줘.");
+      }
+    })
+    .catch(function(){
+      state.submitting = false;
+      toast("네트워크 오류 — 다시 시도해줘.");
+    });
+  }
+
+  /* ══════════════════════════ 시작 ══════════════════════════ */
+  function init(){
+    if (state.sid && state.name){
+      // URL 파라미터로 학번·이름이 이미 채워져 왔으면 로그인 화면을 건너뛴다
+      state.step = "intro";
+    }
+    render();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
