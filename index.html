@@ -229,6 +229,36 @@
     padding:5px 13px;font-family:inherit;font-size:.82rem;cursor:pointer;
   }
   .term-tip-body{font-size:.92rem;line-height:1.7;}
+
+  /* ── 카드별 자료(사료·비교표·창작 시나리오) — 판단 전에 먼저 보여준다 ── */
+  .source-box{
+    background:#fff;border:1.5px solid var(--ink-soft);border-left:4px solid var(--ink);
+    border-radius:0 8px 8px 0;padding:12px 14px;margin:12px 0;
+  }
+  .source-box .src-tag{
+    display:block;font-size:.74rem;font-weight:700;letter-spacing:.04em;
+    color:var(--ink-soft);margin-bottom:6px;
+  }
+  .source-box .q{font-style:italic;font-size:.94rem;line-height:1.6;}
+  .source-box .cite{display:block;text-align:right;font-size:.8rem;color:var(--ink-soft);margin-top:6px;}
+  .source-box .q + .q{margin-top:10px;}
+  .source-box .src-question{
+    margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+    font-size:.9rem;font-weight:700;
+  }
+  .compare-table{width:100%;border-collapse:collapse;margin:4px 0;font-size:.92rem;}
+  .compare-table td{border:1px solid var(--line);padding:7px 10px;}
+  .compare-table td:first-child{color:var(--ink-soft);white-space:nowrap;}
+  .fiction-box{
+    background:#f4edf7;border:1.5px dashed #8a6ea8;border-radius:8px;
+    padding:12px 14px;margin:12px 0;
+  }
+  .fiction-box .src-tag{
+    display:inline-block;background:#8a6ea8;color:#fff;font-size:.74rem;font-weight:700;
+    padding:2px 10px;border-radius:999px;margin-bottom:8px;
+  }
+  .fiction-box .q{font-style:italic;font-size:.94rem;line-height:1.65;}
+  .fiction-box .basis{font-size:.82rem;color:var(--ink-soft);margin-top:8px;}
 </style>
 </head>
 <body>
@@ -277,7 +307,17 @@
       situation: "원에게 빼앗겼던 땅을 원이 다스리고 있다(쌍성총관부).",
       hint: "협상이 아니라 '군사 행동'으로 풀었다. 언제, 어느 지역을 공격했을지 생각해보자.",
       real: "1356년, 공민왕은 쌍성총관부를 무력으로 공격해 철령 이북의 동북면 땅을 되찾았다. 원이 거의 100년 가까이 지배하던 지역을 고려가 다시 손에 넣었다.",
-      tone: "normal"
+      tone: "normal",
+      // 이 카드만 사료 텍스트를 못 구했다 — 정확한 위치를 가늠할 수 있게 최소한의
+      // 지리 정보로 대신한다(지도 이미지는 별도 확보 전까지 임시 대체).
+      // ③ 비교 단계용 "공민왕 때 되찾은 지역" 지도는 아직 이미지 확보 전(TODO) —
+      // 판단 전엔 결과를 드러내는 자료(지도)를 절대 노출하지 않고, 문제 상태만
+      // 묘사하는 문장으로 대신한다.
+      source: {
+        type: "quote",
+        quote: "몽골(원)은 철령 이북에 쌍성총관부, 서경에 동녕부, 제주도에 탐라총관부를 두어 고려의 영토 일부를 직접 지배하였다.",
+        cite: "한국사 고려.pdf"
+      }
     },
     {
       id: 2,
@@ -286,7 +326,13 @@
       hint: "'정동행성'이라는 기구 전체를 없앤 게 아니다. 그 안의 한 부서만 잘라냈다.",
       real: "공민왕은 정동행성 자체를 없애지는 못했다 — 정동행성은 이후에도 계속 존속했다. 대신 그 안에서 사법권을 휘두르며 내정간섭의 통로 노릇을 하던 '이문소'만 혁파했다. 기구 전체가 아니라, 문제의 핵심 부서 하나만 도려낸 것이다.",
       tone: "normal",
-      extraNote: "※ 정동행성(큰 관청 전체) ≠ 이문소(그 안의 한 부서). 없앤 건 이문소뿐이다."
+      extraNote: "※ 정동행성(큰 관청 전체) ≠ 이문소(그 안의 한 부서). 없앤 건 이문소뿐이다.",
+      source: {
+        type: "quote",
+        quote: "일본 원정이 끝난 뒤에도 정동행성을 폐지하지 않고 그대로 두어 내정을 간섭하였다.",
+        cite: "한국사 고려.pdf",
+        note: "※ 정동행성(원이 세운 큰 관청)과 그 안의 이문소(재판을 맡은 작은 부서)는 서로 다른 거야 — 헷갈리지 말고 구분해서 생각해보자."
+      }
     },
     {
       id: 3,
@@ -294,7 +340,12 @@
       situation: "원의 부마국이 되면서 고려 왕실의 호칭과 격이 낮아졌다.",
       hint: "복장과 머리 모양, 관청 이름, 연호(연도를 세는 방식)까지 — 원의 흔적을 하나씩 지웠다.",
       real: "공민왕은 몽골식 풍습(변발 등)을 금지하고, 원의 연호 사용을 중단했으며, 원의 간섭으로 격하됐던 관제와 왕실 호칭을 원래대로 복구했다. 흥미로운 사실이 하나 있다 — 공민왕 자신도 원의 노국대장공주와 혼인한 '부마'였다. 원의 사위였던 왕이 오히려 반원정책을 이끌었다.",
-      tone: "normal"
+      tone: "normal",
+      source: {
+        type: "table",
+        rows: [["폐하","전하"], ["태자","세자"], ["국왕 시호", "원 황제에 대한 충성을 뜻하는 '충(忠)' 자 부여"]],
+        question: "이 호칭 변화를 보면 고려와 원의 관계가 어떤 관계로 보여?"
+      }
     },
     {
       id: 4,
@@ -302,7 +353,13 @@
       situation: "원이 공물과 특산물, 공녀(여성 인력)까지 계속 요구한다.",
       hint: "이 카드는 다른 카드들과 다르다. 고려가 이 문제를 스스로 풀어냈을 거라고 단정하지 말자.",
       real: "고려의 학자 이곡은 원의 어사대에 공녀 제도를 폐지해달라는 상소를 올렸다. 받아들여지지 않았다 — 이 문제는 고려의 힘으로 해결되지 못했다. 1368년 원나라가 멸망하면서 공녀 요구도 함께 사라졌을 뿐이다. 고려는 이 문제 앞에서 끝내 이기지 못했다.",
-      tone: "unsolved"
+      tone: "unsolved",
+      source: {
+        type: "quote",
+        quote: "왕씨(王氏)의 딸을 찾아 바치라는 황제의 명이 있었는데, 그 딸이 뽑혀 들어갔다. …… 딸이 멀리 가게 되자, 옹주가 근심하고 번민하다가 병이 생겼다.",
+        cite: "수령옹주 묘지석 (국립중앙박물관 소장)",
+        question: "공녀로 끌려간다는 것이 한 가족에게 어떤 의미였을까?"
+      }
     },
     {
       id: 5,
@@ -310,7 +367,21 @@
       situation: "권문세족이 백성의 토지와 노비를 불법으로 빼앗는다.",
       hint: "불법으로 빼앗은 것을 원래 주인에게 돌려주는 전담 기구를 새로 만들었다.",
       real: "공민왕은 1366년 전민변정도감을 설치하고 승려 신돈을 등용해, 권문세족이 불법으로 차지한 토지와 노비를 원래 주인에게 돌려주게 했다.",
-      tone: "normal"
+      tone: "normal",
+      // ①판단 전엔 "문제가 얼마나 심각한가"만 보여준다(『고려사』 일반 서술).
+      // 전민변정도감 포고문은 공민왕의 해결책 그 자체를 발표하는 문서라 스포일러 —
+      // 반드시 ③비교 단계(revealSource)에서만 노출한다.
+      source: {
+        type: "quote",
+        quote: "요즘 들어 간악한 도당들이 남의 토지를 빼앗음이 매우 심하다. …… 한 토지의 주인이 대여섯 명이 넘기도 하니, 농민들은 세금으로 생산량의 8~9할을 내야 한다.",
+        cite: "『고려사』"
+      },
+      revealSource: {
+        type: "quote",
+        tag: "실제 정책 발표문",
+        quote: "근래에 기강이 크게 무너져서 탐욕을 부리는 것이 풍습이 되었으며, …… 토지와 노비를 권세 있는 집에서 거의 다 빼앗아 가졌다. …… 이제 도감을 설치하여 바로잡겠다.",
+        cite: "전민변정도감 포고문 (『고려사』)"
+      }
     },
     {
       id: 6,
@@ -318,7 +389,12 @@
       situation: "기존 관료 대부분이 권문세족과 얽혀 있어 개혁을 함께할 사람이 마땅치 않다.",
       hint: "당장 쓸 사람이 없으면 새로 키우는 방법도 있다. 옛 교육기관 하나를 정비했다.",
       real: "공민왕은 신돈을 등용해 개혁을 맡기는 한편, 성균관을 정비하고 유학 교육을 강화했다. 이는 훗날 신진사대부가 성장하는 발판이 됐다.",
-      tone: "normal"
+      tone: "normal",
+      source: {
+        type: "fiction",
+        text: "나는 어릴 때부터 성리학을 공부했고, 작년에 과거에도 급제했어. 그런데 막상 조정에 나가보니 높은 자리는 전부 권문세족 집안 자제들 차지였지. 그들은 과거를 보지 않고도 아버지, 할아버지 덕에 벼슬을 얻어. 왕께서 개혁을 하시려 한다는 소문이 도는데 — 정작 그 개혁을 실행할 관리들 대부분이 권문세족과 얽혀 있으니, 누가 왕을 도울 수 있을까?",
+        basis: "실존 인물이 아니야. '권문세족이 음서로 관직을 세습했다'는 사실과 '신진사대부는 과거에 급제했지만 이 시기엔 아직 소수였다'는 사실, 이 두 가지를 한 인물의 시점으로 엮어서 만든 이야기야."
+      }
     }
   ];
   function cardById(id){ return CARDS.filter(function(c){return c.id===id;})[0]; }
@@ -347,6 +423,48 @@
   function glossify_(str){
     if (!str) return str;
     return str.replace(GLOSSARY_RE, function(m){ return '<span class="term" data-term="'+m+'">'+m+'</span>'; });
+  }
+
+  /* ══════════════════════════ 카드별 자료 박스 ══════════════════════════ */
+  // 절대 원칙: 자료 해석 없이 개념만 묻지 않는다 — 판단 입력칸보다 먼저 노출한다.
+  // 단, "문제 묘사 자료"(c.source, ①판단 화면용)와 "해결책 공개 자료"
+  // (c.revealSource, ③비교 화면 전용)는 반드시 구분한다 — 후자를 판단 전에
+  // 보여주면 정답을 미리 알려주는 셈이라 절대 섞으면 안 됨(카드1 지도, 카드5
+  // 전민변정도감 포고문이 여기 해당).
+  // 카드 6은 뒷받침할 사료가 없어 창작 시나리오로 대체하되, 사료로 오인하지
+  // 않도록 별도 스타일(.fiction-box)과 "창작 자료" 배지로 명확히 구분한다.
+  function renderSourceBox_(s){
+    if (!s) return "";
+    if (s.type === "quote"){
+      return (
+        '<div class="source-box"><span class="src-tag">📜 자료'+(s.tag ? ' — '+esc(s.tag) : '')+'</span>' +
+        '<span class="q">"'+glossify_(s.quote)+'"</span>' +
+        '<span class="cite">— '+esc(s.cite)+'</span>' +
+        (s.note ? '<div class="src-question">'+glossify_(s.note)+'</div>' : '') +
+        (s.question ? '<div class="src-question">💭 '+glossify_(s.question)+'</div>' : '') +
+        '</div>'
+      );
+    }
+    if (s.type === "table"){
+      var rowsHtml = s.rows.map(function(r){
+        return '<tr><td>'+glossify_(r[0])+'</td><td>'+glossify_(r[1])+'</td></tr>';
+      }).join('');
+      return (
+        '<div class="source-box"><span class="src-tag">📜 자료 — 원 간섭기의 호칭 변화</span>' +
+        '<table class="compare-table">'+rowsHtml+'</table>' +
+        (s.question ? '<div class="src-question">💭 '+glossify_(s.question)+'</div>' : '') +
+        '</div>'
+      );
+    }
+    if (s.type === "fiction"){
+      return (
+        '<div class="fiction-box"><span class="src-tag">⚠️ 창작 자료 — 실제 사료 아님</span>' +
+        '<div class="q">"'+glossify_(s.text)+'"</div>' +
+        '<div class="basis">'+glossify_(s.basis)+'</div>' +
+        '</div>'
+      );
+    }
+    return "";
   }
 
   /* ══════════════════════════ 역할별 문구(왕 1인칭 / 조언자) ══════════════════════════ */
@@ -543,6 +661,7 @@
         '<span class="stage-badge">'+stageLabel+'</span><span class="role-badge">'+ri.emoji+' '+esc(ri.label)+'</span>' +
         '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
         '<p class="lede">'+glossify_(c.situation)+'</p>' +
+        renderSourceBox_(c.source) +
         '<label class="field-label">'+esc(ri.solveProblem)+'</label>' +
         '<textarea id="in-problem" placeholder="한 문장으로 정리해보자">'+esc(d.problem)+'</textarea>' +
         '<label class="field-label">'+esc(ri.solveSolution)+'</label>' +
@@ -681,7 +800,10 @@
           '<span class="tag">실제 역사 속 공민왕의 대응</span>' +
           glossify_(c.real) +
           (c.extraNote ? '<div class="note-small">'+glossify_(c.extraNote)+'</div>' : '') +
-        '</div>'
+        '</div>' +
+        // 해결책을 직접 드러내는 자료(카드5 전민변정도감 포고문 등)는 정답을
+        // 스포일러하기 때문에 여기, 실제 역사를 이미 공개한 뒤에만 보여준다.
+        renderSourceBox_(c.revealSource)
       );
     }
 
