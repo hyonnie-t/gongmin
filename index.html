@@ -1248,6 +1248,28 @@
     return "같음 "+same+" · 비슷 "+similar+" · 다름 "+diff+(unsolvedNoted ? " · 미해결 카드 서술 " + unsolvedNoted + "건" : "");
   }
 
+  // 제출 재시도 헬퍼 — history26 포털의 fetchJsonRetry_() 관례(기본 3회·700ms 간격)와
+  // 동일한 값을 쓴다. 활동 중 순간적인 네트워크 문제로 fetch가 한 번 실패하면 예전엔
+  // 바로 에러 토스트만 띄우고 끝이라, 학생이 다시 안 누르면 시트에 기록이 안 남는
+  // 사고가 반복됐다(효니 피드백, 2026-09-09) — 이후 모든 웹앱 제출 로직엔 재시도를
+  // 기본 포함한다(webapp-builder 스킬에도 필수 항목으로 명시).
+  function postWithRetry_(url, payload, triesLeft){
+    triesLeft = (triesLeft == null) ? 3 : triesLeft;
+    return fetch(url, {
+      method: "POST",
+      headers: {"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify(payload)
+    })
+    .then(function(res){ return res.json(); })
+    .catch(function(err){
+      if (triesLeft > 1){
+        return new Promise(function(resolve){ setTimeout(resolve, 700); })
+          .then(function(){ return postWithRetry_(url, payload, triesLeft - 1); });
+      }
+      throw err;
+    });
+  }
+
   function submit(){
     if (state.submitting) return;
     state.submitting = true;
@@ -1279,15 +1301,15 @@
       choicesJson: JSON.stringify(choicesJson)
     };
 
-    fetch(CONFIG.SHEET_WEBAPP_URL, {
-      method: "POST",
-      headers: {"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify(payload)
-    })
-    .then(function(res){ return res.json(); })
+    // 재시도가 끝까지 실패해도 이 브라우저엔 남겨둔다 — 학생이 화면을 닫아버리기 전에
+    // 선생님이나 학생 본인이 이 값으로 수동 재전송/문의할 수 있게. 성공하면 바로 지운다.
+    try{ localStorage.setItem("gongmin_pending_submit", JSON.stringify(payload)); }catch(e){}
+
+    postWithRetry_(CONFIG.SHEET_WEBAPP_URL, payload)
     .then(function(json){
       state.submitting = false;
       if (json && json.result === "success"){
+        try{ localStorage.removeItem("gongmin_pending_submit"); }catch(e){}
         goto("done");
       } else {
         toast((json && json.message) || "제출하다가 문제가 생겼어 — 다시 시도해줘.");
@@ -1295,7 +1317,7 @@
     })
     .catch(function(){
       state.submitting = false;
-      toast("네트워크 오류야 — 다시 시도해줘.");
+      toast("여러 번 시도했는데 계속 실패했어 — 화면 그대로 두고 선생님한테 알려줘. '제출하기'를 다시 누르면 재시도돼.");
     });
   }
 
