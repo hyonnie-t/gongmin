@@ -187,6 +187,16 @@
   .real-history.unsolved .tag{color:var(--unsolved);}
   .note-small{font-size:.82rem;color:var(--ink-soft);margin-top:6px;}
 
+  /* ── 발표 순서 진행 중 "내 카드" 화면 — 이미 쓴 글을 읽기용으로 불러와 보여준다 ── */
+  .present-own-box{
+    background:#fff;border:1.5px solid var(--seal);border-left:4px solid var(--seal);
+    border-radius:0 8px 8px 0;padding:12px 13px;margin:10px 0;font-size:1rem;line-height:1.6;
+  }
+  .present-own-box .tag{
+    display:block;font-size:.74rem;font-weight:700;letter-spacing:.04em;
+    color:var(--seal);margin-bottom:4px;
+  }
+
   .progress-dots{display:flex;gap:6px;justify-content:center;margin:14px 0 2px;}
   .progress-dots span{width:8px;height:8px;border-radius:50%;background:var(--line);}
   .progress-dots span.active{background:var(--seal);}
@@ -513,7 +523,10 @@
     ownCard: null,          // 1단계에서 고른 카드 id
     volunteer: false,
     secondCard: null,       // 자원 시 추가로 고른 카드 id
-    listenIdx: 0,           // 모둠원에게 듣고 채우는 중 몇 번째 카드인지(남은 카드 배열 인덱스)
+    listenIdx: 0,           // 카드1~6 발표 순서대로 진행 중 몇 번째인지(전체 카드 인덱스, v2 —
+                            // 예전엔 "남은 카드"만 순회해서 내 차례엔 화면이 아예 없었다. 이제
+                            // 내 카드 차례엔 solve1/2에서 쓴 내용을 그대로 불러와 읽기용으로 보여주고,
+                            // 남의 카드 차례엔 기존처럼 듣고 채우는 폼을 보여준다)
     compareIdx: 0,
     data: {},               // { [cardId]: {problem, solution, reason, source:'self'|'heard'} }
     compareData: {},        // { [cardId]: {verdict, reason} }
@@ -527,9 +540,10 @@
     if (state.volunteer && state.secondCard) ids.push(state.secondCard);
     return ids;
   }
-  function remainingCardIds(){
-    var mine = myCardIds();
-    return CARDS.map(function(c){return c.id;}).filter(function(id){ return mine.indexOf(id) === -1; });
+  // 발표 순서 = 카드 1~6번 그대로(CARDS가 이미 id 순으로 정의돼 있음). 남의 카드든
+  // 내 카드든 순서상 빠지지 않아야 renderListen에서 "내 차례" 화면을 끼워 넣을 수 있다.
+  function presentOrder(){
+    return CARDS.map(function(c){ return c.id; });
   }
 
   /* ══════════════════════════ 유틸 ══════════════════════════ */
@@ -729,22 +743,46 @@
   }
 
   function renderListen(){
-    var remain = remainingCardIds();
-    if (state.listenIdx >= remain.length){
+    var order = presentOrder();
+    if (state.listenIdx >= order.length){
       // 방어적 처리 — 정상 흐름에서는 btn-listen-next 핸들러가 이 지점에 닿기 전에
       // "compare"로 이미 전환한다(렌더 도중 상태를 바꾸면 방금 그린 화면이 덮어써짐).
       state.step = "compare";
       state.compareIdx = 0;
       return renderCompare();
     }
-    var cid = remain[state.listenIdx];
+    var cid = order[state.listenIdx];
     var c = cardById(cid);
     var d = state.data[cid] || {problem:"",solution:"",reason:""};
+    var idxLabel = '('+(state.listenIdx+1)+'/'+order.length+')';
+    var isMine = myCardIds().indexOf(cid) !== -1;
+
+    if (isMine){
+      // 내가 맡은 카드 차례 — 새로 쓰게 하지 않고 solve1/2에서 이미 쓴 내용을
+      // 그대로 불러와 보여준다. 발표할 때 이 화면을 보면서 읽으면 된다.
+      return (
+        header() +
+        '<div class="panel">' +
+          '<span class="stage-badge">② 발표 순서대로 진행 '+idxLabel+'</span>' +
+          progressDots(state.listenIdx, order.length) +
+          '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
+          '<p class="note-small">네가 맡은 카드야 — 아래 내용을 보면서 발표하면 돼.</p>' +
+          '<div class="present-own-box"><span class="tag">① 문제</span>'+esc(d.problem || "(작성한 내용이 없어)")+'</div>' +
+          '<div class="present-own-box"><span class="tag">② 해결 방법</span>'+esc(d.solution || "(작성한 내용이 없어)")+'</div>' +
+          '<div class="present-own-box"><span class="tag">이유</span>'+esc(d.reason || "(작성한 내용이 없어)")+'</div>' +
+          '<div class="btn-row">' +
+            (state.listenIdx>0 ? '<button class="ghost" id="btn-listen-prev">이전</button>' : '') +
+            '<button class="primary" id="btn-listen-next">'+(state.listenIdx===order.length-1 ? '다음 단계로' : '발표 끝, 다음')+'</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
     return (
       header() +
       '<div class="panel">' +
-        '<span class="stage-badge">② 모둠원에게 듣고 채우기 ('+(state.listenIdx+1)+'/'+remain.length+')</span>' +
-        progressDots(state.listenIdx, remain.length) +
+        '<span class="stage-badge">② 발표 순서대로 진행 '+idxLabel+'</span>' +
+        progressDots(state.listenIdx, order.length) +
         '<h2>카드 '+c.id+'. '+esc(c.title)+'</h2>' +
         '<p class="lede">'+glossify_(c.situation)+'</p>' +
         '<p class="note-small">이 카드는 발표를 듣고 채워보자 — 내가 직접 풀지 않았어도 괜찮아.</p>' +
@@ -1030,11 +1068,18 @@
   }
 
   function bindListen(){
-    var remain = remainingCardIds();
-    var cid = remain[state.listenIdx];
+    var order = presentOrder();
+    var cid = order[state.listenIdx];
+    var isMine = myCardIds().indexOf(cid) !== -1;
     var prevBtn = document.getElementById("btn-listen-prev");
     if (prevBtn) prevBtn.onclick = function(){ state.listenIdx--; render(); };
     document.getElementById("btn-listen-next").onclick = function(){
+      if (isMine){
+        // 내 카드 차례엔 이미 쓴 내용을 그대로 보여줬을 뿐 — 새로 검증할 입력이 없다.
+        state.listenIdx++;
+        goto("listen");
+        return;
+      }
       var p = document.getElementById("in-problem").value.trim();
       var s = document.getElementById("in-solution").value.trim();
       var r = document.getElementById("in-reason").value.trim();
