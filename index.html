@@ -512,7 +512,7 @@
   var PREVIEW = qs.get("preview") === "1";
 
   var state = {
-    step: "login",          // login | role | solve1 | volunteer | solve2 | listen | compare | ending | done
+    step: "login",          // login | role | solve1 | volunteer | solve2 | listen | compareChoice | compare | ending | done
     sid: qs.get("sid") || "",
     name: qs.get("name") || "",
     role: null,             // 'king' | 'advisor'
@@ -528,6 +528,9 @@
                             // 내 카드 차례엔 solve1/2에서 쓴 내용을 그대로 불러와 읽기용으로 보여주고,
                             // 남의 카드 차례엔 기존처럼 듣고 채우는 폼을 보여준다)
     compareIdx: 0,
+    compareCardId: null,    // 카드 2장을 맡은 학생이 실제 역사 비교 글쓰기용으로 고른 카드 id.
+                            // 2장 다 비교시키면 부담이 커서(효니 피드백) 1장만 고르게 한다 —
+                            // 1장만 맡은 학생은 안 쓰고 compareOrder()가 myCardIds()로 자동 대체.
     data: {},               // { [cardId]: {problem, solution, reason, source:'self'|'heard'} }
     compareData: {},        // { [cardId]: {verdict, reason} }
     extension: "",
@@ -539,6 +542,15 @@
     var ids = [state.ownCard];
     if (state.volunteer && state.secondCard) ids.push(state.secondCard);
     return ids;
+  }
+  // 실제 역사와 비교하는 글쓰기(③ compare) 대상. 카드 1장만 맡았으면 myCardIds()와 동일하게
+  // 그 카드 하나. 2장을 맡았으면(volunteer) compareCardId로 고른 카드 하나만 — 2장 다 쓰게
+  // 하지 않는다. compareCardId를 아직 안 골랐으면(선택 화면 진입 전) myCardIds()로 방어적 대체.
+  function compareOrder(){
+    if (state.volunteer && state.secondCard){
+      return state.compareCardId ? [state.compareCardId] : myCardIds();
+    }
+    return myCardIds();
   }
   // 발표 순서 = 카드 1~6번 그대로(CARDS가 이미 id 순으로 정의돼 있음). 남의 카드든
   // 내 카드든 순서상 빠지지 않아야 renderListen에서 "내 차례" 화면을 끼워 넣을 수 있다.
@@ -746,7 +758,12 @@
     var order = presentOrder();
     if (state.listenIdx >= order.length){
       // 방어적 처리 — 정상 흐름에서는 btn-listen-next 핸들러가 이 지점에 닿기 전에
-      // "compare"로 이미 전환한다(렌더 도중 상태를 바꾸면 방금 그린 화면이 덮어써짐).
+      // "compareChoice"나 "compare"로 이미 전환한다(렌더 도중 상태를 바꾸면 방금 그린
+      // 화면이 덮어써짐). 카드 2장을 맡은 학생은 compare 전에 먼저 하나를 고르게 한다.
+      if (state.volunteer && state.secondCard && !state.compareCardId){
+        state.step = "compareChoice";
+        return renderCompareChoice();
+      }
       state.step = "compare";
       state.compareIdx = 0;
       return renderCompare();
@@ -801,8 +818,30 @@
     );
   }
 
+  function renderCompareChoice(){
+    var ids = myCardIds();
+    var html = (
+      header() +
+      '<div class="panel">' +
+        '<span class="stage-badge">③ 비교할 카드 고르기</span>' +
+        '<h2>카드를 두 장 맡았었지?</h2>' +
+        '<p class="lede">실제 역사와 비교하는 글쓰기는 둘 중 <b>한 장만</b> 하면 돼. 어떤 카드로 써볼까?</p>' +
+        '<div class="card-grid">'
+    );
+    ids.forEach(function(id){
+      var c = cardById(id);
+      html += '<button class="situ-card" data-cmpcard="'+id+'">' +
+        '<span class="num">'+c.id+'</span>' +
+        '<span class="t">'+esc(c.title)+'</span>' +
+        '<span class="s">'+esc(c.situation)+'</span>' +
+      '</button>';
+    });
+    html += '</div></div>';
+    return html;
+  }
+
   function renderCompare(){
-    var order = myCardIds();
+    var order = compareOrder();
     var ri = roleInfo();
     if (state.compareIdx >= order.length){
       // 방어적 처리 — 정상 흐름에서는 btn-cmp-next 핸들러가 이 지점에 닿기 전에
@@ -935,6 +974,7 @@
       case "volunteer": html += renderVolunteer(); break;
       case "solve2": html += renderSolve(state.secondCard, "second"); break;
       case "listen": html += renderListen(); break;
+      case "compareChoice": html += renderCompareChoice(); break;
       case "compare": html += renderCompare(); break;
       case "ending": html += renderEnding(); break;
       case "done": html += renderDone(); break;
@@ -953,6 +993,7 @@
       case "volunteer": bindVolunteer(); break;
       case "solve2": bindSolve("second"); break;
       case "listen": bindListen(); break;
+      case "compareChoice": bindCompareChoice(); break;
       case "compare": bindCompare(); break;
       case "ending": bindEnding(); break;
       case "done": bindDone(); break;
@@ -1093,8 +1134,18 @@
     };
   }
 
+  function bindCompareChoice(){
+    Array.prototype.forEach.call(document.querySelectorAll(".situ-card[data-cmpcard]"), function(btn){
+      btn.onclick = function(){
+        state.compareCardId = Number(btn.getAttribute("data-cmpcard"));
+        state.compareIdx = 0;
+        goto("compare");
+      };
+    });
+  }
+
   function bindCompare(){
-    var order = myCardIds();
+    var order = compareOrder();
     var cid = order[state.compareIdx];
     var c = cardById(cid);
     if (c.tone !== "unsolved"){
@@ -1181,7 +1232,10 @@
     return "역할:" + roleInfo().label + " · 담당: " + titles.join(", ") + (state.volunteer ? " [자원 2장]" : "");
   }
   function buildDiffSummary(){
-    var order = myCardIds();
+    // myCardIds()가 아니라 compareOrder()를 써야 한다 — 카드 2장을 맡은 학생은
+    // 실제로 비교 글쓰기를 한 카드 1장만 verdict/reason이 채워지므로, 안 쓴
+    // 카드까지 세면(특히 unsolvedNoted) 안 쓴 걸 쓴 것처럼 잘못 집계된다.
+    var order = compareOrder();
     var same=0, similar=0, diff=0, unsolvedNoted=0;
     order.forEach(function(id){
       var c = cardById(id);
